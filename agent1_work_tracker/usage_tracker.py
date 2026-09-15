@@ -1,6 +1,7 @@
 import time
 from datetime import datetime
 
+from activity_record import ActivityRecord
 from active_app import get_active_app
 from idle_detector import get_idle_seconds
 
@@ -12,6 +13,24 @@ start_time = None
 
 idle_start_time = None
 is_currently_idle = False
+
+activity_records = []
+
+
+def create_activity_record(application, start_time, end_time, status):
+    duration = (end_time - start_time).total_seconds()
+
+    record = ActivityRecord(
+        date=start_time.strftime("%Y-%m-%d"),
+        application=application,
+        start_time=start_time,
+        end_time=end_time,
+        duration_seconds=duration,
+        status=status
+    )
+
+    record.validate()
+    return record
 
 
 while True:
@@ -25,13 +44,21 @@ while True:
 
             if previous_app is not None:
 
-                duration = current_time - start_time
+                record = create_activity_record(
+                    previous_app,
+                    start_time,
+                    current_time,
+                    "Active"
+                )
+
+                activity_records.append(record)
 
                 print(
-                    f"{previous_app}: "
-                    f"{start_time.strftime('%H:%M:%S')} → "
-                    f"{current_time.strftime('%H:%M:%S')} "
-                    f"({duration.total_seconds():.0f} seconds)"
+                    f"[RECORD] {record.application} | "
+                    f"{record.start_time.strftime('%H:%M:%S')} → "
+                    f"{record.end_time.strftime('%H:%M:%S')} | "
+                    f"{record.duration_seconds:.0f} sec | "
+                    f"{record.status}"
                 )
 
                 previous_app = None
@@ -40,34 +67,32 @@ while True:
             idle_start_time = current_time
             is_currently_idle = True
 
-            print(
-                f"Started: Idle "
-                f"at {idle_start_time.strftime('%H:%M:%S')}"
-            )
-
     else:
 
         if is_currently_idle:
 
+            record = create_activity_record(
+                "Idle",
+                idle_start_time,
+                current_time,
+                "Idle"
+            )
+
+            activity_records.append(record)
+
             print(
-                f"Idle: "
-                f"{idle_start_time.strftime('%H:%M:%S')} → "
-                f"{current_time.strftime('%H:%M:%S')} "
-                f"({(current_time - idle_start_time).total_seconds():.0f} seconds)"
+                f"[RECORD] {record.application} | "
+                f"{record.start_time.strftime('%H:%M:%S')} → "
+                f"{record.end_time.strftime('%H:%M:%S')} | "
+                f"{record.duration_seconds:.0f} sec | "
+                f"{record.status}"
             )
 
             is_currently_idle = False
             idle_start_time = None
 
-            current_app = get_active_app()
-
-            previous_app = current_app
+            previous_app = get_active_app()
             start_time = current_time
-
-            print(
-                f"Started: {current_app} "
-                f"at {start_time.strftime('%H:%M:%S')}"
-            )
 
         else:
 
@@ -77,21 +102,24 @@ while True:
 
                 if previous_app is not None:
 
-                    duration = current_time - start_time
+                    record = create_activity_record(
+                        previous_app,
+                        start_time,
+                        current_time,
+                        "Active"
+                    )
+
+                    activity_records.append(record)
 
                     print(
-                        f"{previous_app}: "
-                        f"{start_time.strftime('%H:%M:%S')} → "
-                        f"{current_time.strftime('%H:%M:%S')} "
-                        f"({duration.total_seconds():.0f} seconds)"
+                        f"[RECORD] {record.application} | "
+                        f"{record.start_time.strftime('%H:%M:%S')} → "
+                        f"{record.end_time.strftime('%H:%M:%S')} | "
+                        f"{record.duration_seconds:.0f} sec | "
+                        f"{record.status}"
                     )
 
                 previous_app = current_app
                 start_time = current_time
-
-                print(
-                    f"Started: {current_app} "
-                    f"at {start_time.strftime('%H:%M:%S')}"
-                )
 
     time.sleep(5)
