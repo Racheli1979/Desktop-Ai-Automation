@@ -1,14 +1,15 @@
 import ctypes
+from datetime import datetime, timedelta
+
+
+class LASTINPUTINFO(ctypes.Structure):
+    _fields_ = [
+        ("cbSize", ctypes.c_uint),
+        ("dwTime", ctypes.c_uint),
+    ]
 
 
 def get_idle_seconds():
-
-    class LASTINPUTINFO(ctypes.Structure):
-        _fields_ = [
-            ("cbSize", ctypes.c_uint),
-            ("dwTime", ctypes.c_uint),
-        ]
-
     last_input = LASTINPUTINFO()
     last_input.cbSize = ctypes.sizeof(LASTINPUTINFO)
 
@@ -23,5 +24,11 @@ def get_idle_seconds():
     return idle_time / 1000.0
 
 
-def is_idle(timeout_seconds=60):
-    return get_idle_seconds() >= timeout_seconds
+def get_last_input_time():
+    """
+    Returns the approximate time of the user's last
+    keyboard or mouse input.
+    """
+    idle_seconds = get_idle_seconds()
+
+    return datetime.now() - timedelta(seconds=idle_seconds)
