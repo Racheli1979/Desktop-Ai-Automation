@@ -3,169 +3,172 @@ from datetime import datetime, timedelta
 
 from activity_record import ActivityRecord
 from active_app import get_active_app
-from idle_detector import get_idle_seconds, get_last_input_time
 from excel_report import save_activity_record
+from idle_detector import get_idle_seconds, get_last_input_time
 
 
-# Final application behavior:
-# consider the user idle only after 5 minutes
-# without keyboard or mouse input.
 IDLE_TIMEOUT = 300
-
-# Check the active application 5 times per second.
-# This helps capture short application sessions.
 CHECK_INTERVAL = 0.2
 
 
-previous_app = None
-start_time = None
+class ActivityTracker:
 
-idle_start_time = None
-is_currently_idle = False
+    def __init__(
+        self,
+        idle_timeout: int = IDLE_TIMEOUT,
+        check_interval: float = CHECK_INTERVAL,
+    ):
+        self.idle_timeout = idle_timeout
+        self.check_interval = check_interval
 
+        self.current_app = None
+        self.activity_start = None
+        self.idle_start = None
+        self.is_idle = False
 
-def create_activity_record(application, start_time, end_time, status):
-    """
-    Create and validate an activity record.
+    def create_record(
+        self,
+        application,
+        start_time,
+        end_time,
+        status,
+    ):
+        start_time = start_time.replace(microsecond=0)
+        end_time = end_time.replace(microsecond=0)
 
-    Timestamps are normalized to whole seconds so that
-    Start, End and Duration remain consistent in Excel.
-    """
+        record = ActivityRecord(
+            date=start_time.strftime("%Y-%m-%d"),
+            application=application,
+            start_time=start_time,
+            end_time=end_time,
+            duration_seconds=(end_time - start_time).total_seconds(),
+            status=status,
+        )
 
-    start_time = start_time.replace(microsecond=0)
-    end_time = end_time.replace(microsecond=0)
+        record.validate()
+        return record
 
-    duration = (end_time - start_time).total_seconds()
+    def save_record(
+        self,
+        application,
+        start_time,
+        end_time,
+        status,
+    ):
+        record = self.create_record(
+            application,
+            start_time,
+            end_time,
+            status,
+        )
 
-    record = ActivityRecord(
-        date=start_time.strftime("%Y-%m-%d"),
-        application=application,
-        start_time=start_time,
-        end_time=end_time,
-        duration_seconds=duration,
-        status=status
-    )
+        if record.duration_seconds <= 0:
+            return
 
-    record.validate()
+        save_activity_record(record)
 
-    return record
+        print(
+            f"[RECORD] {record.application} | "
+            f"{record.start_time:%H:%M:%S} → "
+            f"{record.end_time:%H:%M:%S} | "
+            f"{record.duration_seconds:.0f} sec | "
+            f"{record.status}"
+        )
 
+    def start_tracking(self, application, start_time):
+        self.current_app = application
+        self.activity_start = start_time
 
-def save_and_print_record(record):
-    """
-    Save the activity record to Excel and print it.
-    """
+    def stop_tracking(self, end_time):
+        if self.current_app is None or self.activity_start is None:
+            return
 
-    # Do not save zero-duration records
-    if record.duration_seconds <= 0:
-        return
+        self.save_record(
+            self.current_app,
+            self.activity_start,
+            end_time,
+            "Active",
+        )
 
-    save_activity_record(record)
+        self.current_app = None
+        self.activity_start = None
 
-    print(
-        f"[RECORD] {record.application} | "
-        f"{record.start_time.strftime('%H:%M:%S')} → "
-        f"{record.end_time.strftime('%H:%M:%S')} | "
-        f"{record.duration_seconds:.0f} sec | "
-        f"{record.status}"
-    )
+    def start_idle(self, current_time, idle_seconds):
+        self.idle_start = (
+            current_time
+            - timedelta(seconds=idle_seconds - self.idle_timeout)
+        )
 
+        self.stop_tracking(self.idle_start)
+        self.is_idle = True
 
-while True:
+    def end_idle(self):
+        if self.idle_start is None:
+            self.is_idle = False
+            return
 
-    current_time = datetime.now()
-    idle_seconds = get_idle_seconds()
+        idle_end = get_last_input_time()
 
-    # ---------------------------------------------------------
-    # USER BECOMES IDLE
-    # ---------------------------------------------------------
-    if idle_seconds >= IDLE_TIMEOUT:
+        self.save_record(
+            "Idle",
+            self.idle_start,
+            idle_end,
+            "Idle",
+        )
 
-        if not is_currently_idle:
+        self.idle_start = None
+        self.is_idle = False
 
-            # Idle officially starts when the timeout is reached,
-            # not when the last input occurred.
-            idle_start_time = current_time - timedelta(
-                seconds=idle_seconds - IDLE_TIMEOUT
-            )
+        current_app = get_active_app()
 
-            # Close the current application activity record.
-            if previous_app is not None and start_time is not None:
+        if current_app is not None:
+            self.start_tracking(current_app, idle_end)
 
-                record = create_activity_record(
-                    previous_app,
-                    start_time,
-                    idle_start_time,
-                    "Active"
-                )
+    def update_application(self, current_time):
+        current_app = get_active_app()
 
-                save_and_print_record(record)
+        if current_app is None:
+            return
 
-                previous_app = None
-                start_time = None
+        if self.current_app is None:
+            self.start_tracking(current_app, current_time)
+            return
 
-            is_currently_idle = True
+        if current_app != self.current_app:
+            self.stop_tracking(current_time)
+            self.start_tracking(current_app, current_time)
 
-    # ---------------------------------------------------------
-    # USER IS NOT IDLE
-    # ---------------------------------------------------------
-    else:
+    def update(self):
+        current_time = datetime.now()
+        idle_seconds = get_idle_seconds()
 
-        # -----------------------------------------------------
-        # USER RETURNS FROM IDLE
-        # -----------------------------------------------------
-        if is_currently_idle:
+        if idle_seconds >= self.idle_timeout:
+            if not self.is_idle:
+                self.start_idle(current_time, idle_seconds)
+            return
 
-            # The user's actual last input marks the end of Idle.
-            idle_end_time = get_last_input_time()
-
-            record = create_activity_record(
-                "Idle",
-                idle_start_time,
-                idle_end_time,
-                "Idle"
-            )
-
-            save_and_print_record(record)
-
-            is_currently_idle = False
-            idle_start_time = None
-
-            # Start tracking the application that is currently
-            # active after the user returns.
-            previous_app = get_active_app()
-            start_time = idle_end_time
-
-        # -----------------------------------------------------
-        # NORMAL ACTIVE TRACKING
-        # -----------------------------------------------------
+        if self.is_idle:
+            self.end_idle()
         else:
+            self.update_application(current_time)
 
-            current_app = get_active_app()
+    def run(self):
+        print("Activity tracker started.")
 
-            # First detected application
-            if previous_app is None:
+        while True:
+            try:
+                self.update()
+                time.sleep(self.check_interval)
 
-                previous_app = current_app
-                start_time = current_time
+            except KeyboardInterrupt:
+                self.stop_tracking(datetime.now())
+                print("Activity tracker stopped.")
+                break
 
-            # Application changed
-            elif current_app != previous_app:
+            except Exception as error:
+                print(f"[ERROR] Tracker error: {error}")
+                time.sleep(self.check_interval)
 
-                # Close previous application record.
-                if start_time is not None:
 
-                    record = create_activity_record(
-                        previous_app,
-                        start_time,
-                        current_time,
-                        "Active"
-                    )
-
-                    save_and_print_record(record)
-
-                # Start tracking the new application.
-                previous_app = current_app
-                start_time = current_time
-
-    time.sleep(CHECK_INTERVAL)
+if __name__ == "__main__":
+    ActivityTracker().run()

@@ -1,13 +1,17 @@
 import ctypes
-import win32gui
-import win32process
-import psutil
 from datetime import datetime
 
+import psutil
+import win32gui
+import win32process
 
-def get_product_name(exe_path):
+
+def get_product_name(exe_path: str) -> str | None:
     try:
-        size = ctypes.windll.version.GetFileVersionInfoSizeW(exe_path, None)
+        size = ctypes.windll.version.GetFileVersionInfoSizeW(
+            exe_path,
+            None,
+        )
 
         if not size:
             return None
@@ -18,32 +22,33 @@ def get_product_name(exe_path):
             exe_path,
             0,
             size,
-            buffer
+            buffer,
         )
 
         translation = ctypes.c_void_p()
         translation_size = ctypes.c_uint()
 
-        ctypes.windll.version.VerQueryValueW(
+        result = ctypes.windll.version.VerQueryValueW(
             buffer,
             "\\VarFileInfo\\Translation",
             ctypes.byref(translation),
-            ctypes.byref(translation_size)
+            ctypes.byref(translation_size),
         )
 
-        if not translation_size.value:
+        if not result or not translation_size.value:
             return None
 
-        lang = ctypes.cast(
+        language_info = ctypes.cast(
             translation,
-            ctypes.POINTER(ctypes.c_ushort)
+            ctypes.POINTER(ctypes.c_ushort),
         )
 
-        language = lang[0]
-        codepage = lang[1]
+        language = language_info[0]
+        codepage = language_info[1]
 
         sub_block = (
-            f"\\StringFileInfo\\{language:04x}{codepage:04x}\\ProductName"
+            f"\\StringFileInfo\\"
+            f"{language:04x}{codepage:04x}\\ProductName"
         )
 
         value = ctypes.c_void_p()
@@ -53,40 +58,42 @@ def get_product_name(exe_path):
             buffer,
             sub_block,
             ctypes.byref(value),
-            ctypes.byref(value_size)
+            ctypes.byref(value_size),
         )
 
         if result and value.value:
             return ctypes.wstring_at(value.value)
 
-    except Exception:
-        pass
+    except OSError:
+        return None
 
     return None
 
 
-def get_active_app():
+def get_active_app() -> str | None:
     hwnd = win32gui.GetForegroundWindow()
 
-    _, pid = win32process.GetWindowThreadProcessId(hwnd)
-
-    process = psutil.Process(pid)
+    if not hwnd:
+        return None
 
     try:
-        exe_path = process.exe()
+        _, pid = win32process.GetWindowThreadProcessId(hwnd)
+        process = psutil.Process(pid)
 
-        product_name = get_product_name(exe_path)
+        executable_path = process.exe()
+        product_name = get_product_name(executable_path)
 
-        if product_name:
-            return product_name
+        return product_name or process.name()
 
-        return process.name()
-
-    except Exception:
-        return process.name()
+    except (
+        psutil.NoSuchProcess,
+        psutil.AccessDenied,
+        psutil.ZombieProcess,
+        OSError,
+    ):
+        return None
 
 
 if __name__ == "__main__":
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
     print(f"{timestamp}    {get_active_app()}")
