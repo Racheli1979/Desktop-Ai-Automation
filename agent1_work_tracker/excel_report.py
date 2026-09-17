@@ -5,7 +5,7 @@ from zipfile import BadZipFile
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
 
-from activity_record import ActivityRecord
+from .activity_record import ActivityRecord
 
 
 EXCEL_FILE = Path(__file__).parent / "work_hours.xlsx"
@@ -124,10 +124,3 @@ def save_activity_record(record: ActivityRecord) -> None:
     update_daily_totals(workbook)
 
     workbook.save(EXCEL_FILE)
-
-
-if __name__ == "__main__":
-    if not EXCEL_FILE.exists():
-        create_excel_file()
-
-    print(f"Excel file is ready: {EXCEL_FILE}")

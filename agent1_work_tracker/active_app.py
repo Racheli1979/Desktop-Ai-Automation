@@ -92,8 +92,3 @@ def get_active_app() -> str | None:
         OSError,
     ):
         return None
-
-
-if __name__ == "__main__":
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"{timestamp}    {get_active_app()}")
