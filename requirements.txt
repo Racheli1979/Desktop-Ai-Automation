@@ -2,3 +2,4 @@ openpyxl
 python-dotenv
 pywin32
 psutil
+pytest
