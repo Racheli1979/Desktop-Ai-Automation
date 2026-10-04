@@ -1,4 +1,3 @@
-import time
 from datetime import datetime, timedelta
 
 from .activity_record import ActivityRecord
@@ -151,24 +150,3 @@ class ActivityTracker:
             self.end_idle()
         else:
             self.update_application(current_time)
-
-    def run(self):
-        print("Activity tracker started.")
-
-        while True:
-            try:
-                self.update()
-                time.sleep(self.check_interval)
-
-            except KeyboardInterrupt:
-                self.stop_tracking(datetime.now())
-                print("Activity tracker stopped.")
-                break
-
-            except Exception as error:
-                print(f"[ERROR] Tracker error: {error}")
-                time.sleep(self.check_interval)
-
-
-if __name__ == "__main__":
-    ActivityTracker().run()
