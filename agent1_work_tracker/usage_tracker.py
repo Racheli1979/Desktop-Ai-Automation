@@ -5,10 +5,8 @@ from .active_app import get_active_app
 from .excel_report import save_activity_record
 from .idle_detector import get_idle_seconds, get_last_input_time
 
-
 IDLE_TIMEOUT = 300
 CHECK_INTERVAL = 0.2
-
 
 class ActivityTracker:
 

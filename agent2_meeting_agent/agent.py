@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 CHECK_INTERVAL_SECONDS = 30
 
-
 def run_agent(stop_event):
     logger.info("Meeting Agent started")
 
