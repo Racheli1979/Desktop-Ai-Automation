@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from pathlib import Path
 from zipfile import BadZipFile
@@ -7,6 +8,7 @@ from openpyxl.utils.exceptions import InvalidFileException
 
 from .activity_record import ActivityRecord
 
+logger = logging.getLogger(__name__)
 
 EXCEL_FILE = Path(__file__).parent / "work_hours.xlsx"
 
@@ -29,10 +31,16 @@ def create_excel_file() -> None:
 
     workbook.save(EXCEL_FILE)
 
+    logger.info(
+        "Excel file created: %s",
+        EXCEL_FILE,
+    )
+
 
 def load_or_create_workbook():
     if not EXCEL_FILE.exists():
         create_excel_file()
+        return load_workbook(EXCEL_FILE)
 
     try:
         return load_workbook(EXCEL_FILE)
@@ -53,15 +61,14 @@ def load_or_create_workbook():
 
         EXCEL_FILE.rename(backup_file)
 
-        print(
-            "Corrupted Excel file backed up to: "
-            f"{backup_file.name}"
+        logger.warning(
+            "Corrupted Excel file backed up to: %s",
+            backup_file.name,
         )
 
         create_excel_file()
 
         return load_workbook(EXCEL_FILE)
-
 
 def update_daily_totals(workbook) -> None:
     activity_sheet = workbook["Work Hours"]
@@ -110,17 +117,32 @@ def update_daily_totals(workbook) -> None:
 
 
 def save_activity_record(record: ActivityRecord) -> None:
-    workbook = load_or_create_workbook()
-    sheet = workbook["Work Hours"]
+    try:
+        workbook = load_or_create_workbook()
+        sheet = workbook["Work Hours"]
 
-    sheet.append([
-        record.date,
-        record.application,
-        record.start_time.strftime("%H:%M:%S"),
-        record.end_time.strftime("%H:%M:%S"),
-        round(record.duration_seconds),
-    ])
+        sheet.append([
+            record.date,
+            record.application,
+            record.start_time.strftime("%H:%M:%S"),
+            record.end_time.strftime("%H:%M:%S"),
+            round(record.duration_seconds),
+        ])
 
-    update_daily_totals(workbook)
+        update_daily_totals(workbook)
 
-    workbook.save(EXCEL_FILE)
+        workbook.save(EXCEL_FILE)
+
+        logger.info(
+            "Activity record saved: %s | %s sec | %s",
+            record.application,
+            round(record.duration_seconds),
+            record.status,
+        )
+
+    except Exception:
+        logger.exception(
+            "Failed to save activity record: %s",
+            record.application,
+        )
+        raise

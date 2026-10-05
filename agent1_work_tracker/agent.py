@@ -19,8 +19,21 @@ def run_agent(stop_event):
 
     except Exception:
         logger.exception("Work Tracker Agent failed")
-        raise
 
     finally:
-        tracker.stop_tracking(datetime.now())
-        logger.info("Work Tracker Agent stopped")
+        logger.info("Work Tracker Agent shutdown started")
+
+        try:
+            logger.info("Calling tracker.stop_tracking()")
+
+            tracker.stop_tracking(datetime.now())
+
+            logger.info("tracker.stop_tracking() completed")
+
+        except Exception:
+            logger.exception(
+                "Failed to stop Work Tracker Agent cleanly"
+            )
+
+        finally:
+            logger.info("Work Tracker Agent stopped")

@@ -64,14 +64,6 @@ class ActivityTracker:
 
         save_activity_record(record)
 
-        print(
-            f"[RECORD] {record.application} | "
-            f"{record.start_time:%H:%M:%S} → "
-            f"{record.end_time:%H:%M:%S} | "
-            f"{record.duration_seconds:.0f} sec | "
-            f"{record.status}"
-        )
-
     def start_tracking(self, application, start_time):
         self.current_app = application
         self.activity_start = start_time

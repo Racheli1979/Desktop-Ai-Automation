@@ -1,5 +1,6 @@
 import logging
 import threading
+from shared.logging_config import setup_logging
 
 from agent1_work_tracker.agent import (
     run_agent as run_work_tracker,
@@ -10,10 +11,7 @@ from agent2_meeting_agent.agent import (
 
 
 def main():
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-    )
+    setup_logging()
 
     logger = logging.getLogger(__name__)
 
@@ -52,6 +50,8 @@ def main():
 
     finally:
         stop_event.set()
+
+        logger.info("Waiting for agents to stop")
 
         work_tracker_thread.join()
         meeting_agent_thread.join()

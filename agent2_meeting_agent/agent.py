@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 CHECK_INTERVAL_SECONDS = 30
 
+
 def run_agent(stop_event):
     logger.info("Meeting Agent started")
 
@@ -30,7 +31,22 @@ def run_agent(stop_event):
                     meeting.title,
                 )
 
-                decision = classifier.classify(meeting)
+                try:
+                    decision = classifier.classify(meeting)
+
+                    logger.info(
+                        "Meeting classification: %s | important=%s | reason=%s",
+                        meeting.title,
+                        decision.important,
+                        decision.reason,
+                    )
+
+                except Exception:
+                    logger.exception(
+                        "Failed to classify meeting: %s",
+                        meeting.title,
+                    )
+                    continue
 
                 prepare_desktop_for_meeting(
                     meeting,
