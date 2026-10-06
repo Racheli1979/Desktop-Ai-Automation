@@ -2,10 +2,6 @@ import logging
 
 from .meeting import Meeting
 from .meeting_classifier import MeetingDecision
-# from .desktop_controller import (
-#     close_open_windows,
-#     open_meeting_url,
-# )
 from .desktop_controller import (
     minimize_open_windows,
     open_meeting_url,
@@ -20,37 +16,35 @@ def prepare_desktop_for_meeting(
     decision: MeetingDecision,
 ) -> bool:
 
-    logger.info(
+    logger.debug(
         "Preparing desktop for meeting: %s",
         meeting.title,
     )
 
     if not decision.important:
-        logger.info(
+        logger.debug(
             "Meeting is not important. No desktop preparation required: %s",
             meeting.title,
         )
         return False
 
-    logger.info(
+    logger.debug(
         "Meeting classified as important: %s. "
         "Starting desktop preparation.",
         meeting.title,
     )
 
-    # close_results = close_open_windows()
     minimize_results = minimize_open_windows()
 
     failed_closures = [
         window
-        # for window, success in close_results
         for window, success in minimize_results
         if not success
     ]
 
     if failed_closures:
         logger.warning(
-            "Some application windows could not be closed: %s",
+            "Some application windows could not be minimized: %s",
             [window.title for window in failed_closures],
         )
 

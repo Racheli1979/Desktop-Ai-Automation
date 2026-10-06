@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 import logging
-import time
 import webbrowser
 
 import psutil
@@ -41,10 +40,6 @@ PROTECTED_WINDOW_CLASSES = {
 
 
 def get_open_windows() -> list[DesktopWindow]:
-    """
-    Return all visible application windows that are safe to process.
-    """
-
     windows: list[DesktopWindow] = []
 
     def enum_window_callback(hwnd: int, _: int) -> None:
@@ -85,61 +80,15 @@ def get_open_windows() -> list[DesktopWindow]:
             )
         )
 
-    win32gui.EnumWindows(enum_window_callback, 0)
+    win32gui.EnumWindows(
+        enum_window_callback,
+        0,
+    )
 
     return windows
 
 
-# def close_window(
-#     window: DesktopWindow,
-# ) -> bool:
-#     """
-#     Request a single window to close.
-
-#     WM_CLOSE gives the application an opportunity to save data
-#     or ask the user what to do with unsaved changes.
-#     """
-
-#     if window.process_name.lower() in PROTECTED_PROCESS_NAMES:
-#         logger.warning(
-#             "Protected process cannot be closed: %s",
-#             window.process_name,
-#         )
-#         return False
-
-#     if not win32gui.IsWindow(window.handle):
-#         logger.warning(
-#             "Window no longer exists: %s",
-#             window.title,
-#         )
-#         return False
-
-#     try:
-#         win32gui.PostMessage(
-#             window.handle,
-#             win32con.WM_CLOSE,
-#             0,
-#             0,
-#         )
-
-#         logger.info(
-#             "Close request sent: %s | process=%s",
-#             window.title,
-#             window.process_name,
-#         )
-
-#         return True
-
-#     except Exception:
-#         logger.exception(
-#             "Failed to send close request: %s",
-#             window.title,
-#         )
-#         return False
-
 def minimize_window(window: DesktopWindow) -> bool:
-    """Minimize a single application window."""
-
     if not win32gui.IsWindow(window.handle):
         logger.warning(
             "Window no longer exists: %s",
@@ -153,7 +102,7 @@ def minimize_window(window: DesktopWindow) -> bool:
             win32con.SW_MINIMIZE,
         )
 
-        logger.info(
+        logger.debug(
             "Window minimized: %s | process=%s",
             window.title,
             window.process_name,
@@ -168,102 +117,8 @@ def minimize_window(window: DesktopWindow) -> bool:
         )
         return False
 
-# def close_open_windows(
-#     timeout_seconds: float = 3.0,
-# ) -> list[tuple[DesktopWindow, bool]]:
-#     """
-#     Request all eligible windows to close and verify the result.
-
-#     All close requests are sent first so one slow application
-#     does not prevent the other applications from receiving
-#     their close requests.
-#     """
-
-#     windows = get_open_windows()
-
-#     logger.info(
-#         "Found %d open windows",
-#         len(windows),
-#     )
-
-#     for window in windows:
-#         logger.info(
-#             "FOUND WINDOW: %s | process=%s | pid=%s",
-#             window.title,
-#             window.process_name,
-#             window.process_id,
-#         )
-
-#     if not windows:
-#         logger.info("No application windows found to close")
-#         return []
-
-#     results: list[tuple[DesktopWindow, bool]] = []
-
-#     # First send close requests to ALL windows.
-#     for window in windows:
-#         close_window(window)
-
-#     # Give applications time to process WM_CLOSE.
-#     deadline = time.monotonic() + timeout_seconds
-
-#     remaining_windows = windows.copy()
-
-#     while remaining_windows and time.monotonic() < deadline:
-#         still_open = []
-
-#         for window in remaining_windows:
-#             if win32gui.IsWindow(window.handle):
-#                 still_open.append(window)
-#             else:
-#                 logger.info(
-#                     "Window closed successfully: %s",
-#                     window.title,
-#                 )
-
-#         remaining_windows = still_open
-
-#         if remaining_windows:
-#             time.sleep(0.1)
-
-#     # Build final result for every window.
-#     for window in windows:
-#         is_closed = not win32gui.IsWindow(window.handle)
-
-#         if is_closed:
-#             logger.info(
-#                 "Window closed: %s",
-#                 window.title,
-#             )
-#         else:
-#             logger.warning(
-#                 "Window is still open after close request: %s",
-#                 window.title,
-#             )
-
-#         results.append(
-#             (window, is_closed)
-#         )
-
-#     closed_count = sum(
-#         success
-#         for _, success in results
-#     )
-
-#     failed_count = len(results) - closed_count
-
-#     logger.info(
-#         "Desktop close operation completed: "
-#         "%d closed, %d still open",
-#         closed_count,
-#         failed_count,
-#     )
-
-#     return results
 
 def minimize_open_windows() -> list[tuple[DesktopWindow, bool]]:
-    """Minimize all eligible application windows."""
-
     windows = get_open_windows()
 
     logger.info(
@@ -275,21 +130,38 @@ def minimize_open_windows() -> list[tuple[DesktopWindow, bool]]:
 
     for window in windows:
         success = minimize_window(window)
-        results.append((window, success))
+        results.append(
+            (window, success)
+        )
 
-    logger.info(
-        "Desktop minimize operation completed",
+    successful = sum(
+        1
+        for _, success in results
+        if success
     )
+
+    failed = len(results) - successful
+
+    if failed == 0:
+        logger.info(
+            "Desktop windows minimized successfully: %d",
+            successful,
+        )
+    else:
+        logger.warning(
+            "Desktop windows minimized: %d/%d",
+            successful,
+            len(results),
+        )
 
     return results
 
-def open_meeting_url(meeting_url: str) -> bool:
-    """
-    Open the meeting URL in the default browser.
-    """
 
+def open_meeting_url(meeting_url: str) -> bool:
     if not meeting_url:
-        logger.error("Meeting URL is empty")
+        logger.error(
+            "Meeting URL is empty"
+        )
         return False
 
     if not meeting_url.startswith(
@@ -313,8 +185,7 @@ def open_meeting_url(meeting_url: str) -> bool:
             return False
 
         logger.info(
-            "Meeting URL opened successfully: %s",
-            meeting_url,
+            "Meeting URL opened successfully"
         )
 
         return True

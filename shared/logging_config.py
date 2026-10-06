@@ -1,7 +1,6 @@
 import logging
 from pathlib import Path
 
-
 LOG_DIR = Path("logs")
 LOG_FILE = LOG_DIR / "app.log"
 
@@ -20,3 +19,7 @@ def setup_logging() -> None:
             logging.StreamHandler(),
         ],
     )
+
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    logging.getLogger("httpx2").setLevel(logging.WARNING)
