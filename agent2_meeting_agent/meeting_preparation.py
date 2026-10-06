@@ -2,8 +2,12 @@ import logging
 
 from .meeting import Meeting
 from .meeting_classifier import MeetingDecision
+# from .desktop_controller import (
+#     close_open_windows,
+#     open_meeting_url,
+# )
 from .desktop_controller import (
-    close_open_windows,
+    minimize_open_windows,
     open_meeting_url,
 )
 
@@ -34,11 +38,13 @@ def prepare_desktop_for_meeting(
         meeting.title,
     )
 
-    close_results = close_open_windows()
+    # close_results = close_open_windows()
+    minimize_results = minimize_open_windows()
 
     failed_closures = [
         window
-        for window, success in close_results
+        # for window, success in close_results
+        for window, success in minimize_results
         if not success
     ]
 

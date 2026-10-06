@@ -19,6 +19,7 @@ class DesktopWindow:
     process_id: int
     process_name: str
 
+
 PROTECTED_PROCESS_NAMES = {
     "dwm.exe",
     "winlogon.exe",
@@ -30,6 +31,7 @@ PROTECTED_PROCESS_NAMES = {
     "system idle process",
 }
 
+
 PROTECTED_WINDOW_CLASSES = {
     "Progman",
     "WorkerW",
@@ -39,6 +41,9 @@ PROTECTED_WINDOW_CLASSES = {
 
 
 def get_open_windows() -> list[DesktopWindow]:
+    """
+    Return all visible application windows that are safe to process.
+    """
 
     windows: list[DesktopWindow] = []
 
@@ -60,6 +65,7 @@ def get_open_windows() -> list[DesktopWindow]:
 
         try:
             process_name = psutil.Process(process_id).name()
+
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             logger.warning(
                 "Could not read process information for window: %s",
@@ -84,17 +90,55 @@ def get_open_windows() -> list[DesktopWindow]:
     return windows
 
 
-def close_window(
-    window: DesktopWindow,
-    timeout_seconds: float = 2.0,
-) -> bool:
+# def close_window(
+#     window: DesktopWindow,
+# ) -> bool:
+#     """
+#     Request a single window to close.
 
-    if window.process_name.lower() in PROTECTED_PROCESS_NAMES:
-        logger.warning(
-            "Protected process cannot be closed: %s",
-            window.process_name,
-        )
-        return False
+#     WM_CLOSE gives the application an opportunity to save data
+#     or ask the user what to do with unsaved changes.
+#     """
+
+#     if window.process_name.lower() in PROTECTED_PROCESS_NAMES:
+#         logger.warning(
+#             "Protected process cannot be closed: %s",
+#             window.process_name,
+#         )
+#         return False
+
+#     if not win32gui.IsWindow(window.handle):
+#         logger.warning(
+#             "Window no longer exists: %s",
+#             window.title,
+#         )
+#         return False
+
+#     try:
+#         win32gui.PostMessage(
+#             window.handle,
+#             win32con.WM_CLOSE,
+#             0,
+#             0,
+#         )
+
+#         logger.info(
+#             "Close request sent: %s | process=%s",
+#             window.title,
+#             window.process_name,
+#         )
+
+#         return True
+
+#     except Exception:
+#         logger.exception(
+#             "Failed to send close request: %s",
+#             window.title,
+#         )
+#         return False
+
+def minimize_window(window: DesktopWindow) -> bool:
+    """Minimize a single application window."""
 
     if not win32gui.IsWindow(window.handle):
         logger.warning(
@@ -104,74 +148,179 @@ def close_window(
         return False
 
     try:
-        win32gui.PostMessage(
+        win32gui.ShowWindow(
             window.handle,
-            win32con.WM_CLOSE,
-            0,
-            0,
+            win32con.SW_MINIMIZE,
         )
 
-        start_time = time.monotonic()
-
-        while time.monotonic() - start_time < timeout_seconds:
-            if not win32gui.IsWindow(window.handle):
-                logger.info(
-                    "Window closed successfully: %s",
-                    window.title,
-                )
-                return True
-
-            time.sleep(0.1)
-
-        logger.warning(
-            "Window is still open after close request: %s",
+        logger.info(
+            "Window minimized: %s | process=%s",
             window.title,
+            window.process_name,
         )
 
-        return False
+        return True
 
     except Exception:
         logger.exception(
-            "Failed to close window: %s",
+            "Failed to minimize window: %s",
             window.title,
         )
         return False
 
+# def close_open_windows(
+#     timeout_seconds: float = 3.0,
+# ) -> list[tuple[DesktopWindow, bool]]:
+#     """
+#     Request all eligible windows to close and verify the result.
 
-def close_open_windows() -> list[tuple[DesktopWindow, bool]]:
+#     All close requests are sent first so one slow application
+#     does not prevent the other applications from receiving
+#     their close requests.
+#     """
+
+#     windows = get_open_windows()
+
+#     logger.info(
+#         "Found %d open windows",
+#         len(windows),
+#     )
+
+#     for window in windows:
+#         logger.info(
+#             "FOUND WINDOW: %s | process=%s | pid=%s",
+#             window.title,
+#             window.process_name,
+#             window.process_id,
+#         )
+
+#     if not windows:
+#         logger.info("No application windows found to close")
+#         return []
+
+#     results: list[tuple[DesktopWindow, bool]] = []
+
+#     # First send close requests to ALL windows.
+#     for window in windows:
+#         close_window(window)
+
+#     # Give applications time to process WM_CLOSE.
+#     deadline = time.monotonic() + timeout_seconds
+
+#     remaining_windows = windows.copy()
+
+#     while remaining_windows and time.monotonic() < deadline:
+#         still_open = []
+
+#         for window in remaining_windows:
+#             if win32gui.IsWindow(window.handle):
+#                 still_open.append(window)
+#             else:
+#                 logger.info(
+#                     "Window closed successfully: %s",
+#                     window.title,
+#                 )
+
+#         remaining_windows = still_open
+
+#         if remaining_windows:
+#             time.sleep(0.1)
+
+#     # Build final result for every window.
+#     for window in windows:
+#         is_closed = not win32gui.IsWindow(window.handle)
+
+#         if is_closed:
+#             logger.info(
+#                 "Window closed: %s",
+#                 window.title,
+#             )
+#         else:
+#             logger.warning(
+#                 "Window is still open after close request: %s",
+#                 window.title,
+#             )
+
+#         results.append(
+#             (window, is_closed)
+#         )
+
+#     closed_count = sum(
+#         success
+#         for _, success in results
+#     )
+
+#     failed_count = len(results) - closed_count
+
+#     logger.info(
+#         "Desktop close operation completed: "
+#         "%d closed, %d still open",
+#         closed_count,
+#         failed_count,
+#     )
+
+#     return results
+
+def minimize_open_windows() -> list[tuple[DesktopWindow, bool]]:
+    """Minimize all eligible application windows."""
 
     windows = get_open_windows()
+
+    logger.info(
+        "Found %d open windows",
+        len(windows),
+    )
 
     results: list[tuple[DesktopWindow, bool]] = []
 
     for window in windows:
-        success = close_window(window)
+        success = minimize_window(window)
         results.append((window, success))
+
+    logger.info(
+        "Desktop minimize operation completed",
+    )
 
     return results
 
-
 def open_meeting_url(meeting_url: str) -> bool:
+    """
+    Open the meeting URL in the default browser.
+    """
 
     if not meeting_url:
         logger.error("Meeting URL is empty")
         return False
 
-    if not meeting_url.startswith(("http://", "https://")):
-        logger.error("Invalid meeting URL")
+    if not meeting_url.startswith(
+        ("http://", "https://")
+    ):
+        logger.error(
+            "Invalid meeting URL"
+        )
         return False
 
     try:
-        opened = webbrowser.open(meeting_url, new=2)
+        opened = webbrowser.open(
+            meeting_url,
+            new=2,
+        )
 
         if not opened:
-            logger.error("Could not open meeting URL")
+            logger.error(
+                "Could not open meeting URL"
+            )
             return False
 
-        logger.info("Meeting URL opened successfully")
+        logger.info(
+            "Meeting URL opened successfully: %s",
+            meeting_url,
+        )
 
         return True
 
     except Exception:
-        logger.exception("Failed to open meeting URL")
+        logger.exception(
+            "Failed to open meeting URL"
+        )
         return False
