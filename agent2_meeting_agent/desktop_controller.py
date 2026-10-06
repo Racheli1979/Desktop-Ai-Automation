@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 import logging
-import time
 import webbrowser
 
 import psutil
@@ -19,6 +18,7 @@ class DesktopWindow:
     process_id: int
     process_name: str
 
+
 PROTECTED_PROCESS_NAMES = {
     "dwm.exe",
     "winlogon.exe",
@@ -30,6 +30,7 @@ PROTECTED_PROCESS_NAMES = {
     "system idle process",
 }
 
+
 PROTECTED_WINDOW_CLASSES = {
     "Progman",
     "WorkerW",
@@ -39,7 +40,6 @@ PROTECTED_WINDOW_CLASSES = {
 
 
 def get_open_windows() -> list[DesktopWindow]:
-
     windows: list[DesktopWindow] = []
 
     def enum_window_callback(hwnd: int, _: int) -> None:
@@ -60,6 +60,7 @@ def get_open_windows() -> list[DesktopWindow]:
 
         try:
             process_name = psutil.Process(process_id).name()
+
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             logger.warning(
                 "Could not read process information for window: %s",
@@ -79,23 +80,15 @@ def get_open_windows() -> list[DesktopWindow]:
             )
         )
 
-    win32gui.EnumWindows(enum_window_callback, 0)
+    win32gui.EnumWindows(
+        enum_window_callback,
+        0,
+    )
 
     return windows
 
 
-def close_window(
-    window: DesktopWindow,
-    timeout_seconds: float = 2.0,
-) -> bool:
-
-    if window.process_name.lower() in PROTECTED_PROCESS_NAMES:
-        logger.warning(
-            "Protected process cannot be closed: %s",
-            window.process_name,
-        )
-        return False
-
+def minimize_window(window: DesktopWindow) -> bool:
     if not win32gui.IsWindow(window.handle):
         logger.warning(
             "Window no longer exists: %s",
@@ -104,74 +97,101 @@ def close_window(
         return False
 
     try:
-        win32gui.PostMessage(
+        win32gui.ShowWindow(
             window.handle,
-            win32con.WM_CLOSE,
-            0,
-            0,
+            win32con.SW_MINIMIZE,
         )
 
-        start_time = time.monotonic()
-
-        while time.monotonic() - start_time < timeout_seconds:
-            if not win32gui.IsWindow(window.handle):
-                logger.info(
-                    "Window closed successfully: %s",
-                    window.title,
-                )
-                return True
-
-            time.sleep(0.1)
-
-        logger.warning(
-            "Window is still open after close request: %s",
+        logger.debug(
+            "Window minimized: %s | process=%s",
             window.title,
+            window.process_name,
         )
 
-        return False
+        return True
 
     except Exception:
         logger.exception(
-            "Failed to close window: %s",
+            "Failed to minimize window: %s",
             window.title,
         )
         return False
 
 
-def close_open_windows() -> list[tuple[DesktopWindow, bool]]:
-
+def minimize_open_windows() -> list[tuple[DesktopWindow, bool]]:
     windows = get_open_windows()
+
+    logger.info(
+        "Found %d open windows",
+        len(windows),
+    )
 
     results: list[tuple[DesktopWindow, bool]] = []
 
     for window in windows:
-        success = close_window(window)
-        results.append((window, success))
+        success = minimize_window(window)
+        results.append(
+            (window, success)
+        )
+
+    successful = sum(
+        1
+        for _, success in results
+        if success
+    )
+
+    failed = len(results) - successful
+
+    if failed == 0:
+        logger.info(
+            "Desktop windows minimized successfully: %d",
+            successful,
+        )
+    else:
+        logger.warning(
+            "Desktop windows minimized: %d/%d",
+            successful,
+            len(results),
+        )
 
     return results
 
 
 def open_meeting_url(meeting_url: str) -> bool:
-
     if not meeting_url:
-        logger.error("Meeting URL is empty")
+        logger.error(
+            "Meeting URL is empty"
+        )
         return False
 
-    if not meeting_url.startswith(("http://", "https://")):
-        logger.error("Invalid meeting URL")
+    if not meeting_url.startswith(
+        ("http://", "https://")
+    ):
+        logger.error(
+            "Invalid meeting URL"
+        )
         return False
 
     try:
-        opened = webbrowser.open(meeting_url, new=2)
+        opened = webbrowser.open(
+            meeting_url,
+            new=2,
+        )
 
         if not opened:
-            logger.error("Could not open meeting URL")
+            logger.error(
+                "Could not open meeting URL"
+            )
             return False
 
-        logger.info("Meeting URL opened successfully")
+        logger.info(
+            "Meeting URL opened successfully"
+        )
 
         return True
 
     except Exception:
-        logger.exception("Failed to open meeting URL")
+        logger.exception(
+            "Failed to open meeting URL"
+        )
         return False

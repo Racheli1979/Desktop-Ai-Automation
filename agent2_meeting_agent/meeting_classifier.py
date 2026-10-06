@@ -52,7 +52,7 @@ class MeetingClassifier:
     def classify(self, meeting: Meeting) -> MeetingDecision:
         prompt = self._build_prompt(meeting)
 
-        logger.info(
+        logger.debug(
             "Classifying meeting: %s at %s",
             meeting.title,
             meeting.start_time.strftime("%H:%M"),
@@ -68,7 +68,7 @@ class MeetingClassifier:
         decision = self._parse_response(response.content)
 
         logger.info(
-            "Meeting decision: title=%s important=%s reason=%s",
+            "Meeting classified: title=%s | important=%s | reason=%s",
             meeting.title,
             decision.important,
             decision.reason,

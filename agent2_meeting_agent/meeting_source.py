@@ -1,28 +1,30 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from .meeting import Meeting
+
+MEETING_START = datetime.now() + timedelta(minutes=0.3)
 
 
 def get_meetings() -> list[Meeting]:
     return [
         Meeting(
-            title="Project Review",
-            start_time=datetime(2026, 9, 17, 14, 0),
-            duration_minutes=60,
+            title="Urgent Project Meeting",
+            start_time=MEETING_START,
+            duration_minutes=30,
             participants=[
                 "Manager",
                 "Tech Lead",
             ],
-            description="Discuss project decisions",
+            description="Urgent project decision",
             meeting_url="https://meet.google.com/example",
         ),
         Meeting(
-            title="Team Sync",
-            start_time=datetime(2026, 9, 17, 15, 30),
+            title="Team Coffee Chat",
+            start_time=MEETING_START + timedelta(minutes=2),
             duration_minutes=30,
             participants=[
                 "Developer",
             ],
-            description="Weekly team sync",
-        ),
+            description="Casual team conversation",
+        )
     ]

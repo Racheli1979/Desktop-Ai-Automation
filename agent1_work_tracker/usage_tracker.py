@@ -1,4 +1,3 @@
-import time
 from datetime import datetime, timedelta
 
 from .activity_record import ActivityRecord
@@ -6,10 +5,8 @@ from .active_app import get_active_app
 from .excel_report import save_activity_record
 from .idle_detector import get_idle_seconds, get_last_input_time
 
-
 IDLE_TIMEOUT = 300
 CHECK_INTERVAL = 0.2
-
 
 class ActivityTracker:
 
@@ -66,14 +63,6 @@ class ActivityTracker:
             return
 
         save_activity_record(record)
-
-        print(
-            f"[RECORD] {record.application} | "
-            f"{record.start_time:%H:%M:%S} → "
-            f"{record.end_time:%H:%M:%S} | "
-            f"{record.duration_seconds:.0f} sec | "
-            f"{record.status}"
-        )
 
     def start_tracking(self, application, start_time):
         self.current_app = application
@@ -151,24 +140,3 @@ class ActivityTracker:
             self.end_idle()
         else:
             self.update_application(current_time)
-
-    def run(self):
-        print("Activity tracker started.")
-
-        while True:
-            try:
-                self.update()
-                time.sleep(self.check_interval)
-
-            except KeyboardInterrupt:
-                self.stop_tracking(datetime.now())
-                print("Activity tracker stopped.")
-                break
-
-            except Exception as error:
-                print(f"[ERROR] Tracker error: {error}")
-                time.sleep(self.check_interval)
-
-
-if __name__ == "__main__":
-    ActivityTracker().run()
