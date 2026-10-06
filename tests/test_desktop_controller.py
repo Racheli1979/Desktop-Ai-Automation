@@ -2,8 +2,8 @@ from unittest.mock import patch
 
 from agent2_meeting_agent.desktop_controller import (
     DesktopWindow,
-    close_open_windows,
-    close_window,
+    minimize_open_windows,
+    minimize_window,
     get_open_windows,
     open_meeting_url,
 )
@@ -71,7 +71,7 @@ def test_get_open_windows_ignores_hidden_windows():
     assert windows == []
 
 
-def test_close_window_returns_false_for_protected_process():
+def test_minimize_window_returns_false_for_protected_process():
     window = DesktopWindow(
         handle=100,
         title="Windows System",
@@ -82,40 +82,13 @@ def test_close_window_returns_false_for_protected_process():
     with patch(
         "agent2_meeting_agent.desktop_controller.win32gui.PostMessage"
     ) as mock_post_message:
-        result = close_window(window)
+        result = minimize_window(window)
 
     assert result is False
     mock_post_message.assert_not_called()
 
 
-def test_close_window_returns_true_when_window_closes():
-    window = DesktopWindow(
-        handle=100,
-        title="Test Application",
-        process_id=1234,
-        process_name="test.exe",
-    )
-
-    with (
-        patch(
-            "agent2_meeting_agent.desktop_controller.win32gui.IsWindow",
-            side_effect=[True, False],
-        ),
-        patch(
-            "agent2_meeting_agent.desktop_controller.win32gui.PostMessage"
-        ) as mock_post_message,
-        patch(
-            "agent2_meeting_agent.desktop_controller.time.sleep"
-        ),
-    ):
-        result = close_window(window)
-
-    assert result is True
-
-    mock_post_message.assert_called_once()
-
-
-def test_close_window_returns_false_when_window_stays_open():
+def test_minimize_window_returns_true_when_window_closes():
     window = DesktopWindow(
         handle=100,
         title="Test Application",
@@ -129,21 +102,41 @@ def test_close_window_returns_false_when_window_stays_open():
             return_value=True,
         ),
         patch(
-            "agent2_meeting_agent.desktop_controller.win32gui.PostMessage"
+            "agent2_meeting_agent.desktop_controller.win32gui.ShowWindow"
+        ) as mock_show_window,
+    ):
+        result = minimize_window(window)
+
+    assert result is True
+
+    mock_show_window.assert_called_once()
+
+
+def test_minimize_window_returns_false_when_window_stays_open():
+    window = DesktopWindow(
+        handle=100,
+        title="Test Application",
+        process_id=1234,
+        process_name="test.exe",
+    )
+
+    with (
+        patch(
+            "agent2_meeting_agent.desktop_controller.win32gui.IsWindow",
+            return_value=True,
         ),
         patch(
-            "agent2_meeting_agent.desktop_controller.time.sleep"
-        ),
+            "agent2_meeting_agent.desktop_controller.win32gui.ShowWindow"
+        ) as mock_show_window,
     ):
-        result = close_window(
-            window,
-            timeout_seconds=0,
-        )
+        result = minimize_window(window)
 
-    assert result is False
+    assert result is True
+    
+    mock_show_window.assert_called_once()
 
 
-def test_close_open_windows_returns_results():
+def test_minimize_open_windows_returns_results():
     window = DesktopWindow(
         handle=100,
         title="Test Application",
@@ -157,16 +150,16 @@ def test_close_open_windows_returns_results():
             return_value=[window],
         ),
         patch(
-            "agent2_meeting_agent.desktop_controller.close_window",
+            "agent2_meeting_agent.desktop_controller.minimize_window",
             return_value=True,
-        ) as mock_close_window,
+        ) as mock_minimize_window,
     ):
-        results = close_open_windows()
+        results = minimize_open_windows()
 
     assert len(results) == 1
     assert results[0] == (window, True)
 
-    mock_close_window.assert_called_once_with(window)
+    mock_minimize_window.assert_called_once_with(window)
 
 
 def test_open_meeting_url_success():
