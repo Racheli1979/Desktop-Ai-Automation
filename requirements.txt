@@ -5,3 +5,4 @@ psutil
 pytest
 langchain
 langchain-openai
+pyinstaller
