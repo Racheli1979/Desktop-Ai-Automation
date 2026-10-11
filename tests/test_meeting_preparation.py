@@ -31,8 +31,8 @@ def test_does_nothing_when_meeting_is_not_important():
 
     with (
         patch(
-            "agent2_meeting_agent.meeting_preparation.close_open_windows"
-        ) as mock_close,
+            "agent2_meeting_agent.meeting_preparation.minimize_open_windows"
+        ) as mock_minimize,
         patch(
             "agent2_meeting_agent.meeting_preparation.open_meeting_url"
         ) as mock_open,
@@ -43,7 +43,7 @@ def test_does_nothing_when_meeting_is_not_important():
         )
 
     assert result is False
-    mock_close.assert_not_called()
+    mock_minimize.assert_not_called()
     mock_open.assert_not_called()
 
 
@@ -57,9 +57,9 @@ def test_prepares_desktop_for_important_meeting():
 
     with (
         patch(
-            "agent2_meeting_agent.meeting_preparation.close_open_windows",
+            "agent2_meeting_agent.meeting_preparation.minimize_open_windows",
             return_value=[],
-        ) as mock_close,
+        ) as mock_minimize,
         patch(
             "agent2_meeting_agent.meeting_preparation.open_meeting_url",
             return_value=True,
@@ -71,7 +71,7 @@ def test_prepares_desktop_for_important_meeting():
         )
 
     assert result is True
-    mock_close.assert_called_once()
+    mock_minimize.assert_called_once()
     mock_open.assert_called_once_with(
         "https://meet.google.com/example"
     )
@@ -87,9 +87,9 @@ def test_fails_when_important_meeting_has_no_url():
 
     with (
         patch(
-            "agent2_meeting_agent.meeting_preparation.close_open_windows",
+            "agent2_meeting_agent.meeting_preparation.minimize_open_windows",
             return_value=[],
-        ) as mock_close,
+        ) as mock_minimize,
         patch(
             "agent2_meeting_agent.meeting_preparation.open_meeting_url"
         ) as mock_open,
@@ -100,7 +100,7 @@ def test_fails_when_important_meeting_has_no_url():
         )
 
     assert result is False
-    mock_close.assert_called_once()
+    mock_minimize.assert_called_once()
     mock_open.assert_not_called()
 
 
@@ -114,7 +114,7 @@ def test_continues_when_some_windows_fail_to_close():
 
     with (
         patch(
-            "agent2_meeting_agent.meeting_preparation.close_open_windows",
+            "agent2_meeting_agent.meeting_preparation.minimize_open_windows",
             return_value=[
                 (
                     DesktopWindow(
@@ -153,7 +153,7 @@ def test_fails_when_meeting_cannot_be_opened():
 
     with (
         patch(
-            "agent2_meeting_agent.meeting_preparation.close_open_windows",
+            "agent2_meeting_agent.meeting_preparation.minimize_open_windows",
             return_value=[],
         ),
         patch(
