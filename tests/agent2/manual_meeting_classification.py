@@ -1,5 +1,5 @@
-from .meeting_classifier import MeetingClassifier
-from .meeting_source import get_meetings
+from ...agent2_meeting_agent.meeting_classifier import MeetingClassifier
+from ...agent2_meeting_agent.meeting_source import get_meetings
 
 
 def main():
