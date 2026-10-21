@@ -35,8 +35,8 @@ def test_create_record():
 
     assert record.application == "Visual Studio Code"
     assert record.duration_seconds == 10
-    assert record.start_time.microsecond == 0
-    assert record.end_time.microsecond == 0
+    assert record.start_time == start.replace(microsecond=0)
+    assert record.end_time == end.replace(microsecond=0)
 
 
 def test_start_tracking():

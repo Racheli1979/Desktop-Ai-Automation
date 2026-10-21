@@ -15,8 +15,27 @@ MCP_TOOL_NAME = "list_events"
 MAX_RESULTS = 2500
 
 
+def _get_mcp_server_command() -> tuple[str, list[str], str]:
+    if getattr(sys, "frozen", False):
+        server_exe = Path(sys.executable).with_name(
+            "CalendarMcpServer.exe"
+        )
+
+        if not server_exe.is_file():
+            raise FileNotFoundError(
+                f"MCP server executable not found: {server_exe}"
+            )
+
+        return str(server_exe), [], str(server_exe.parent)
+
+    return (
+        sys.executable,
+        ["-m", "mcp_server.calendar_mcp_server"],
+        str(PROJECT_DIR),
+    )
+
+
 def _parse_datetime(value: str) -> datetime:
-    """Convert an ISO datetime string to local naive datetime."""
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
 
     if parsed.tzinfo is not None:
@@ -26,11 +45,12 @@ def _parse_datetime(value: str) -> datetime:
 
 
 async def _fetch_events() -> list[dict]:
-    """Fetch calendar events through the MCP server."""
+    command, args, cwd = _get_mcp_server_command()
+
     server = StdioServerParameters(
-        command=sys.executable,
-        args=["-m", "mcp_server.calendar_mcp_server"],
-        cwd=str(PROJECT_DIR),
+        command=command,
+        args=args,
+        cwd=cwd,
     )
 
     async with stdio_client(server) as (read_stream, write_stream):
@@ -78,7 +98,6 @@ async def _fetch_events() -> list[dict]:
 
 
 def get_meetings() -> list[Meeting]:
-    """Return timed Google Calendar events as Meeting objects."""
     events = asyncio.run(_fetch_events())
     meetings = []
 
@@ -86,7 +105,6 @@ def get_meetings() -> list[Meeting]:
         start_value = event.get("start")
         end_value = event.get("end")
 
-        # Skip all-day events, which have dates but no times.
         if (
             not isinstance(start_value, str)
             or not isinstance(end_value, str)

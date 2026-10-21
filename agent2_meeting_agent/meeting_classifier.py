@@ -81,17 +81,17 @@ class MeetingClassifier:
         participants = ", ".join(meeting.participants) or "None"
 
         return f"""
-Meeting information:
+            Meeting information:
 
-Title: {meeting.title}
-Start time: {meeting.start_time.strftime("%Y-%m-%d %H:%M")}
-Duration: {meeting.duration_minutes} minutes
-Participants: {participants}
-Description: {meeting.description or "None"}
+            Title: {meeting.title}
+            Start time: {meeting.start_time.strftime("%Y-%m-%d %H:%M")}
+            Duration: {meeting.duration_minutes} minutes
+            Participants: {participants}
+            Description: {meeting.description or "None"}
 
-Determine whether this meeting is important enough
-to trigger desktop preparation.
-"""
+            Determine whether this meeting is important enough
+            to trigger desktop preparation.
+            """
 
     @staticmethod
     def _parse_response(content: str) -> MeetingDecision:

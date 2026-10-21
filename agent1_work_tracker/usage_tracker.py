@@ -5,7 +5,7 @@ from .active_app import get_active_app
 from .excel_report import save_activity_record
 from .idle_detector import get_idle_seconds, get_last_input_time
 
-IDLE_TIMEOUT = 5
+IDLE_TIMEOUT = 300
 CHECK_INTERVAL = 0.2
 
 class ActivityTracker:
@@ -23,6 +23,7 @@ class ActivityTracker:
         self.idle_start = None
         self.is_idle = False
 
+    
     def create_record(
         self,
         application,
@@ -117,6 +118,7 @@ class ActivityTracker:
         current_app = get_active_app()
 
         if current_app is None:
+            self.stop_tracking(current_time)
             return
 
         if self.current_app is None:

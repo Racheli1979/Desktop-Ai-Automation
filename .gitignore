@@ -15,7 +15,7 @@ htmlcov/
 
 build/
 dist/
-*.spec
+# *.spec
 
 *.xlsx
 *.log
