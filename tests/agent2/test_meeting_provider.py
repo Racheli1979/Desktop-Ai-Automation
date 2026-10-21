@@ -5,9 +5,7 @@ from agent2_meeting_agent.meeting_provider import MeetingProvider
 
 
 def create_provider(meetings):
-    """
-    Create a MeetingProvider using a controlled test source.
-    """
+    
     return MeetingProvider(
         meeting_source=lambda: meetings,
         upcoming_window_minutes=10,

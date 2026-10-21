@@ -1,6 +1,8 @@
 .venv/
 
 .env
+credentials/
+token.json
 
 __pycache__/
 *.py[cod]
@@ -13,7 +15,7 @@ htmlcov/
 
 build/
 dist/
-*.spec
+# *.spec
 
 *.xlsx
 *.log

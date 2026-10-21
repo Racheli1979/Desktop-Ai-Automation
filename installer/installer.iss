@@ -1,6 +1,6 @@
 #define MyAppName "Desktop AI Automation"
 #define MyAppVersion "1.0.0"
-#define MyAppPublisher "Racheli"
+#define MyAppPublisher "Rachel Davidovitch"
 #define MyAppExeName "DesktopAiAutomation.exe"
 
 [Setup]
@@ -24,6 +24,7 @@ UninstallDisplayName={#MyAppName}
 
 [Files]
 Source: "..\dist\DesktopAiAutomation\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "README.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

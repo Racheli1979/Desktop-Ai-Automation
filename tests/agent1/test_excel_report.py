@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import pytest
 from openpyxl import load_workbook
 
 from agent1_work_tracker import excel_report
@@ -66,7 +67,7 @@ def test_create_excel_file(tmp_path, monkeypatch):
         "Application",
         "Start",
         "End",
-        "Duration",
+        "Duration (Minutes)",
     ]
 
 
@@ -83,7 +84,7 @@ def test_save_activity_record(tmp_path, monkeypatch):
         application="Visual Studio Code",
         start_minute=0,
         end_minute=10,
-        duration=10,
+        duration=600,
     )
 
     excel_report.save_activity_record(record)
@@ -96,7 +97,7 @@ def test_save_activity_record(tmp_path, monkeypatch):
         sheet.cell(2, 2).value
         == "Visual Studio Code"
     )
-    assert sheet.cell(2, 5).value == 10
+    assert sheet.cell(2, 5).value == pytest.approx(10)
 
 
 def test_previous_records_are_preserved(
@@ -115,14 +116,14 @@ def test_previous_records_are_preserved(
         application="Visual Studio Code",
         start_minute=0,
         end_minute=10,
-        duration=10,
+        duration=600,
     )
 
     second_record = create_record(
         application="Google Chrome",
         start_minute=10,
         end_minute=20,
-        duration=10,
+        duration=600,
     )
 
     excel_report.save_activity_record(first_record)
@@ -160,7 +161,7 @@ def test_idle_is_excluded_from_daily_total(
         application="Visual Studio Code",
         start_minute=0,
         end_minute=10,
-        duration=10,
+        duration=600,
         status="Active",
     )
 
@@ -168,7 +169,7 @@ def test_idle_is_excluded_from_daily_total(
         application="Idle",
         start_minute=10,
         end_minute=20,
-        duration=10,
+        duration=600,
         status="Idle",
     )
 
@@ -185,4 +186,4 @@ def test_idle_is_excluded_from_daily_total(
     sheet = workbook["Daily Totals"]
 
     assert sheet.cell(2, 1).value == "2026-09-17"
-    assert sheet.cell(2, 2).value == 10
+    assert sheet.cell(2, 2).value == pytest.approx(10)

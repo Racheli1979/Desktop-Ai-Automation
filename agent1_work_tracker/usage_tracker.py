@@ -23,6 +23,7 @@ class ActivityTracker:
         self.idle_start = None
         self.is_idle = False
 
+    
     def create_record(
         self,
         application,
@@ -117,6 +118,7 @@ class ActivityTracker:
         current_app = get_active_app()
 
         if current_app is None:
+            self.stop_tracking(current_time)
             return
 
         if self.current_app is None:

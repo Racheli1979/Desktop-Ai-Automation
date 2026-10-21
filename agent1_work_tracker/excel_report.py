@@ -8,21 +8,15 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
 
 from .activity_record import ActivityRecord
+from shared.paths import EXCEL_FILE, USER_DATA_DIR
 
 
 logger = logging.getLogger(__name__)
 
-
-# Store runtime data outside the PyInstaller application files.
-BASE_DIR = Path.home() / "DesktopAiAutomation"
-EXCEL_FILE = BASE_DIR / "work_hours.xlsx"
+BASE_DIR = USER_DATA_DIR
 
 
 def create_excel_file() -> None:
-    """
-    Create the Excel workbook if it does not exist.
-    """
-
     BASE_DIR.mkdir(
         parents=True,
         exist_ok=True,
@@ -39,7 +33,7 @@ def create_excel_file() -> None:
             "Application",
             "Start",
             "End",
-            "Duration",
+            "Duration (Minutes)",
         ]
     )
 
@@ -50,11 +44,13 @@ def create_excel_file() -> None:
     totals_sheet.append(
         [
             "Date",
-            "Total Work Seconds",
+            "Total Work Minutes",
+            "Total Work Time",
         ]
     )
 
     workbook.save(EXCEL_FILE)
+    workbook.close()
 
     logger.info(
         "Excel file created: %s",
@@ -63,10 +59,6 @@ def create_excel_file() -> None:
 
 
 def backup_corrupted_file() -> None:
-    """
-    Create a backup of a corrupted Excel file before replacing it.
-    """
-
     if not EXCEL_FILE.exists():
         return
 
@@ -91,10 +83,6 @@ def backup_corrupted_file() -> None:
 
 
 def load_or_create_workbook():
-    """
-    Load the existing workbook or create a new one.
-    """
-
     BASE_DIR.mkdir(
         parents=True,
         exist_ok=True,
@@ -118,17 +106,12 @@ def load_or_create_workbook():
         )
 
         backup_corrupted_file()
-
         create_excel_file()
 
         return load_workbook(EXCEL_FILE)
 
 
 def update_daily_totals(workbook) -> None:
-    """
-    Recalculate daily work totals from non-idle records.
-    """
-
     if "Work Hours" not in workbook.sheetnames:
         return
 
@@ -148,45 +131,76 @@ def update_daily_totals(workbook) -> None:
     totals_sheet.append(
         [
             "Date",
-            "Total Work Seconds",
+            "Total Work Minutes",
+            "Total Work Time",
         ]
     )
 
     totals = {}
-
     work_sheet = workbook["Work Hours"]
 
     for row in work_sheet.iter_rows(
         min_row=2,
         values_only=True,
     ):
-        if not row:
+        if not row or len(row) < 5:
             continue
 
         date = row[0]
-        duration = row[4]
-
-        if date is None or duration is None:
-            continue
-
         application = row[1]
+        duration_minutes = row[4]
+
+        if date is None or duration_minutes is None:
+            continue
 
         if application == "Idle":
             continue
 
+        try:
+            duration_minutes = float(
+                duration_minutes
+            )
+        except (TypeError, ValueError):
+            logger.warning(
+                "Skipping invalid duration: %s",
+                duration_minutes,
+            )
+            continue
+
+        if duration_minutes < 0:
+            continue
+
         totals[date] = (
-            totals.get(date, 0)
-            + float(duration)
+            totals.get(date, 0.0)
+            + duration_minutes
         )
 
-    for date, total_seconds in sorted(
+    for date, total_minutes in sorted(
         totals.items(),
         key=lambda item: str(item[0]),
     ):
+        total_seconds = round(
+            total_minutes * 60
+        )
+
+        total_minutes_rounded = round(
+            total_seconds / 60
+        )
+
+        hours, minutes = divmod(
+            total_minutes_rounded,
+            60,
+        )
+
+        formatted_time = (
+            f"{hours} שעות ו-{minutes} דקות"
+        )
+
         totals_sheet.append(
             [
                 date,
-                total_seconds,
+                round(total_minutes, 2),
+                formatted_time,
             ]
         )
 
@@ -194,39 +208,42 @@ def update_daily_totals(workbook) -> None:
 def save_activity_record(
     record: ActivityRecord,
 ) -> None:
-    """
-    Save an activity record to the Excel workbook.
-    """
-
     try:
         workbook = load_or_create_workbook()
 
-        work_sheet = workbook["Work Hours"]
+        try:
+            work_sheet = workbook["Work Hours"]
 
-        work_sheet.append(
-            [
-                record.date,
+            duration_minutes = (
+                record.duration_seconds / 60
+            )
+
+            work_sheet.append(
+                [
+                    record.date,
+                    record.application,
+                    record.start_time.strftime(
+                        "%H:%M:%S"
+                    ),
+                    record.end_time.strftime(
+                        "%H:%M:%S"
+                    ),
+                    duration_minutes,
+                ]
+            )
+
+            update_daily_totals(workbook)
+            workbook.save(EXCEL_FILE)
+
+            logger.info(
+                "Activity record saved: %s | %.4f minutes | %s",
                 record.application,
-                record.start_time.strftime(
-                    "%H:%M:%S"
-                ),
-                record.end_time.strftime(
-                    "%H:%M:%S"
-                ),
-                record.duration_seconds,
-            ]
-        )
+                duration_minutes,
+                record.status,
+            )
 
-        update_daily_totals(workbook)
-
-        workbook.save(EXCEL_FILE)
-
-        logger.info(
-            "Activity record saved: %s | %.0f sec | %s",
-            record.application,
-            record.duration_seconds,
-            record.status,
-        )
+        finally:
+            workbook.close()
 
     except (
         OSError,

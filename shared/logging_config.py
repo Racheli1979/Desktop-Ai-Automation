@@ -1,12 +1,13 @@
 import logging
-from pathlib import Path
 
-LOG_DIR = Path("logs")
-LOG_FILE = LOG_DIR / "app.log"
+from shared.paths import LOG_DIR, LOG_FILE
 
 
 def setup_logging() -> None:
-    LOG_DIR.mkdir(exist_ok=True)
+    LOG_DIR.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
     logging.basicConfig(
         level=logging.INFO,
