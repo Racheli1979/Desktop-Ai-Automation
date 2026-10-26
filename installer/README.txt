@@ -4,7 +4,7 @@ An AI-powered Windows desktop application that automates work tracking and meeti
 
 ## 📋 Overview
 
-Desktop AI Automation consists of two independent agents:
+Desktop AI Automation consists of a launcher and two independent agents.
 
 ### ⏱️ Agent 1 — Work Tracker
 
@@ -64,7 +64,7 @@ Administrator approval may be required during installation, depending on the Win
 
 ### 🔑 1. Configure the OpenAI API Key
 
-On the first launch, the application prompts the user to enter an OpenAI API key if one has not already been configured for the current Windows user.
+When the Meeting Assistant is launched, the application prompts the user to enter an OpenAI API key if one has not already been configured for the current Windows user.
 
 1. Obtain an API key through the OpenAI Platform.
 2. Enter the key when prompted.
@@ -89,14 +89,11 @@ The user's OAuth token is stored locally and separately from the application ins
 
 ## ▶️ Running the Application
 
-After setup, launch the application using the desktop shortcut or the Start menu.
+Launch the application using the desktop shortcut or the Start menu.
 
-The application starts its two agents:
-
-- The Work Tracker monitors desktop activity and records work-related data.
-- The Meeting Assistant checks upcoming calendar events and classifies their importance using AI.
-
-The application may display a console window containing status messages and logs. This is expected for the current console-based build.
+- **First manual launch:** The launcher starts Agent 1 in the background and configures it to start automatically when the current Windows user signs in. Agent 2 also starts.
+- **Windows sign-in:** Agent 1 starts automatically. Agent 2 does not start automatically.
+- **Subsequent manual launches:** The launcher checks whether Agent 1 is already running to avoid starting another instance, then starts Agent 2.
 
 Some actions depend on the configured agents, available network access, valid credentials, and upcoming calendar events.
 
@@ -110,7 +107,7 @@ Application files and user data are stored separately.
 C:\Program Files\DesktopAiAutomation
 ```
 
-Contains the executable files, bundled dependencies, and supporting application files.
+Contains the launcher, both agent executables, bundled dependencies, and supporting application files.
 
 ### 🗂️ User Data
 
@@ -133,7 +130,7 @@ Keeping user data outside the installation directory helps preserve it when appl
 - Each user should configure their own OpenAI API key.
 - Each user should authorize their own Google account.
 - Personal API keys and OAuth tokens must not be committed to source control or included in public releases.
-- The shared Google OAuth client configuration is distinct from a user's personal OAuth token.
+- The Google OAuth client configuration is distinct from a user's personal OAuth token.
 - User-specific data should remain in the user's local application data directory.
 
 ## 🩺 Troubleshooting
@@ -142,7 +139,7 @@ If the application does not start or a service connection fails:
 
 - **🔑 OpenAI:** Verify your API key and internet connection.
 - **📅 Google Calendar:** Verify your internet connection and complete the Google authorization process if prompted.
-- **⚠️ Application errors:** Check the application logs at `%LOCALAPPDATA%\DesktopAiAutomation\logs`.
+- **⚠️ Application errors:** Check the application logs at `%LOCALAPPDATA%\DesktopAiAutomation\logs\`, if this is the configured log directory.
 
 ## 👩‍💻 Development
 

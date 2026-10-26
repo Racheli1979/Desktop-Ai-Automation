@@ -1,15 +1,19 @@
 from datetime import datetime, timedelta
+import logging
 
 from .activity_record import ActivityRecord
 from .active_app import get_active_app
 from .excel_report import save_activity_record
 from .idle_detector import get_idle_seconds, get_last_input_time
 
+
+logger = logging.getLogger(__name__)
+
 IDLE_TIMEOUT = 300
 CHECK_INTERVAL = 0.2
 
-class ActivityTracker:
 
+class ActivityTracker:
     def __init__(
         self,
         idle_timeout: int = IDLE_TIMEOUT,
@@ -23,7 +27,6 @@ class ActivityTracker:
         self.idle_start = None
         self.is_idle = False
 
-    
     def create_record(
         self,
         application,
@@ -84,12 +87,13 @@ class ActivityTracker:
         self.activity_start = None
 
     def start_idle(self, current_time, idle_seconds):
-        self.idle_start = (
-            current_time
-            - timedelta(seconds=idle_seconds - self.idle_timeout)
+        idle_start = current_time - timedelta(
+            seconds=idle_seconds - self.idle_timeout
         )
 
-        self.stop_tracking(self.idle_start)
+        self.stop_tracking(idle_start)
+
+        self.idle_start = idle_start
         self.is_idle = True
 
     def end_idle(self):
