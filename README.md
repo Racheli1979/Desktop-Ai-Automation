@@ -146,7 +146,7 @@ If the application does not start or a service connection fails:
 To work with the source code, clone the repository:
 
 ```bash
-git clone https://github.com/RiviLevi/Desktop-Ai-Automation.git
+git clone https://github.com/Racheli1979/Desktop-Ai-Automation.git
 cd Desktop-Ai-Automation
 ```
 
