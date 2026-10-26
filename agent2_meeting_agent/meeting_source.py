@@ -17,16 +17,18 @@ MAX_RESULTS = 2500
 
 def _get_mcp_server_command() -> tuple[str, list[str], str]:
     if getattr(sys, "frozen", False):
-        server_exe = Path(sys.executable).with_name(
-            "CalendarMcpServer.exe"
+        server_dir = (
+            Path(sys.executable).parent
+            / "CalendarMcpServer"
         )
+        server_exe = server_dir / "CalendarMcpServer.exe"
 
         if not server_exe.is_file():
             raise FileNotFoundError(
                 f"MCP server executable not found: {server_exe}"
             )
 
-        return str(server_exe), [], str(server_exe.parent)
+        return str(server_exe), [], str(server_dir)
 
     return (
         sys.executable,
